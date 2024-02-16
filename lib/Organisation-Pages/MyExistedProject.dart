@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:grad_proj/Widgets/task-request-item.dart';
 import 'package:image_picker/image_picker.dart';
@@ -8,7 +9,7 @@ import 'package:image_picker/image_picker.dart';
 import '../Widgets/project_item.dart';
 
 class MyExistedProject extends StatefulWidget {
-  late final ProjItem item;
+  final ProjItem item;
 
   MyExistedProject({required this.item});
 
@@ -30,6 +31,7 @@ class _MyExistedProjectState extends State<MyExistedProject> {
       // TODO: Handle the picked image file here
     }
   }
+  
   @override
   Widget build(BuildContext context) {
 
@@ -132,41 +134,24 @@ class _MyExistedProjectState extends State<MyExistedProject> {
               ),
 
               SizedBox(height: 25,),
-              ListView.builder(
-                physics: NeverScrollableScrollPhysics(),
-                shrinkWrap: true,
-                itemCount: widget.item.tasks.length,
-                itemBuilder: (context, taskIndex) {
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.item.tasks[taskIndex].taskName + "  :",
-                        style: TextStyle(
-                          fontFamily: "MyCustomFont",
-                          color: Color(0xFF393E46),
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                        ),
-                      ),
+              FutureBuilder(
+                
+                  future: FirebaseFirestore.instance.collection("Projects").doc(widget.item.projName).collection("requests").get(),
+                  builder: (context,snapshot){
+                    if(snapshot.hasData){
+                      return ListView.builder(shrinkWrap: true,itemCount:snapshot.data!.docs.length,itemBuilder: (context,index){
+                        var doc = snapshot.data!.docs[index];
 
-                      SizedBox(height: 20),
-                      ListView.builder(
-                        shrinkWrap: true,
-                        physics: NeverScrollableScrollPhysics(),
-                        itemCount: widget.item.tasks[taskIndex].requests.length,
-                        itemBuilder: (context, requestIndex) {
-                          return TaskRequest(
-                            volname: widget.item.tasks[taskIndex].requests[requestIndex].volname,
-                            volUrl: widget.item.tasks[taskIndex].requests[requestIndex].volUrl,
-                          );
-                        },
-                      ),
-                      SizedBox(height: 20,)
-                    ],
-                  );
-                },
-              )
+                        return TaskRequest(volname: doc["volname"],
+                          volUrl: "",
+                         );
+                      });
+                    }else{
+                      return Center(child: CircularProgressIndicator());
+                    }
+
+
+                  })
 
             ],
           ),

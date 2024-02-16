@@ -1,4 +1,7 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:grad_proj/Login.dart';
 enum Type { organisation, volunteer }
 class VolRegister extends StatefulWidget {
 
@@ -8,6 +11,39 @@ class VolRegister extends StatefulWidget {
 }
 
 class _VolRegisterState extends State<VolRegister> {
+   late String email ;
+ late String password ;
+   late String name ;
+  String? _selectedCity;
+
+  late String story ;
+  late String study ;
+  Future<void> registerUser(String email, String password, String name, String city, String story, String study) async {
+    if (email.trim().isEmpty || password.isEmpty) {
+      throw 'Email and password must not be empty';
+    }
+    var formdata = _formKey.currentState;
+    formdata?.save();
+    try {
+      UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: email.trim(),
+        password: password.trim(),
+      );
+      User? user = userCredential.user;
+      // Add user data to Firestore
+      await FirebaseFirestore.instance.collection('users').doc(user!.uid).set({
+        'name': name,
+        'city': city,
+        'story': story,
+        'study': study,
+        'type' : "Volunteer",
+        'Status':'approved'
+
+      });
+    } catch (e) {
+      print(e.toString());
+    }
+  }
   List<String> syrianBiggestCities = [
     'Aleppo',
     'Damascus',
@@ -21,7 +57,7 @@ class _VolRegisterState extends State<VolRegister> {
     'Daraa',
     'As-Suwayda',
   ];
-  String? _selectedCity;
+
   TextEditingController _dateController = TextEditingController();
   Type _registrationType = Type.volunteer;
   void _handleRegistrationTypeChange(Type? value) {
@@ -42,6 +78,10 @@ class _VolRegisterState extends State<VolRegister> {
           Container(
             width: 300,
             child: TextFormField(
+
+              onFieldSubmitted: (value){
+                email=value;
+              },
               decoration: InputDecoration(
                 enabledBorder: OutlineInputBorder(
                   borderSide: BorderSide(
@@ -80,6 +120,10 @@ class _VolRegisterState extends State<VolRegister> {
           Container(
             width: 300,
             child: TextFormField(
+
+              onFieldSubmitted: (value){
+                password=value;
+              },
               obscureText: _obscurePassword,
               decoration: InputDecoration(
                 enabledBorder: OutlineInputBorder(
@@ -133,7 +177,9 @@ class _VolRegisterState extends State<VolRegister> {
           Container(
             width: 300,
             child: TextFormField(
-
+            onFieldSubmitted: (value){
+              name=value!;
+            },
               decoration: InputDecoration(
                 enabledBorder: OutlineInputBorder(
                   borderSide: BorderSide(
@@ -173,6 +219,9 @@ class _VolRegisterState extends State<VolRegister> {
           ),
           Container( width: 300,
             child: DropdownButtonFormField<String>(
+              onSaved: (value){
+                _selectedCity=value;
+              },
               decoration: InputDecoration(
                 enabledBorder: OutlineInputBorder(
                   borderSide: BorderSide(
@@ -218,7 +267,9 @@ class _VolRegisterState extends State<VolRegister> {
             width: 300,
 
             child: TextFormField(
-
+              onFieldSubmitted: (value){
+                story=value!;
+              },
               decoration: InputDecoration(
                 enabledBorder: OutlineInputBorder(
                   borderSide: BorderSide(
@@ -247,7 +298,7 @@ class _VolRegisterState extends State<VolRegister> {
               ),
               validator: (value) {
                 if (value!.isEmpty) {
-                  return 'Please enter your email';
+                  return 'Please enter your story';
                 }
                 return null;
               },
@@ -258,6 +309,9 @@ class _VolRegisterState extends State<VolRegister> {
           Container(
             width: 300,
             child: TextFormField(
+              onFieldSubmitted: (value){
+                study=value!;
+              },
               decoration: InputDecoration(
                 enabledBorder: OutlineInputBorder(
                   borderSide: BorderSide(
@@ -297,76 +351,40 @@ class _VolRegisterState extends State<VolRegister> {
           SizedBox(
             height: 25,
           ),
-          Container(
-            width: 300,
-            child: TextFormField(
-              style: TextStyle(fontFamily: "MyCustomFont", color: Color(0xFF393E46),fontSize: 16 ),
-              controller: _dateController,
-              decoration: InputDecoration(
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(
-                    color: Colors.grey,
-                    width: 2.0,
-                  ),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(
-                    color: Color(0xFF00ADB5),
-                    width: 2.0,
-                  ),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                labelStyle: TextStyle(
-                  color: Colors.grey[400],
-                  fontFamily: "MyCustomFont",
-                  fontSize: 16,
-                ),
-                labelText: 'Date of Birth',
-                hintText: 'Select your date of birth',
-                prefixIcon: Icon(Icons.calendar_today,color: Colors.grey[400],),
-              ),
-              onTap: () async {
-                DateTime date = DateTime(2000);
-                FocusScope.of(context).requestFocus(new FocusNode()); // hide the keyboard
-                date = (await showDatePicker(
 
-                  context: context,
-                  initialDate: DateTime(2000),
-                  firstDate: DateTime(1900),
-                  lastDate: DateTime(2100),
-
-                ))!;
-                _dateController.text = date.toString().substring(0, 10);
-              },
-            ),
-          ),
           SizedBox(
             height: 25,
           ),
           Container(
             width: 250,
-            child: ElevatedButton(
-              onPressed: () {
+            child:ElevatedButton(
+              onPressed: () async {
                 if (_formKey.currentState!.validate()) {
-                  // Perform login operation
+                  // Call the registerUser method
+                  await registerUser(
+                    email.trim(),
+                    password.trim(),
+                    name,
+                    _selectedCity!,
+
+                    story,
+                    study,
+                  );
+                  showDialog(context: context, builder: (context)=>AlertDialog(
+                    title: Text("Regestration Success",style: TextStyle(fontFamily: "MyCustomFont"),),
+                    content: TextButton(child: Text("Continue to Login"),onPressed:(){
+                      Navigator.push(context, MaterialPageRoute(builder: (context)=>LoginPage()));
+                    } ,),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(30)),
+
+                    ),
+
+                  ));
+
                 }
               },
-              child: Text(
-                'Register',
-                style: TextStyle(
-                  fontFamily: "MyCustomFont",
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              style: ElevatedButton.styleFrom(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                primary: Color(0xFF00ADB5),
-                padding: EdgeInsets.symmetric(vertical: 16),
-              ),
+              child: Text('Register'),
             ),
           ),
           SizedBox(height: 30,)

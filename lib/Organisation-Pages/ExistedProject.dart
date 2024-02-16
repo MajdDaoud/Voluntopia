@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:grad_proj/Widgets/tasks-item.dart';
 import '../Widgets/project_item.dart';
@@ -10,13 +11,16 @@ class ExistedProject extends StatefulWidget {
 
   @override
   State<ExistedProject> createState() => _ExistedProjectState();
+
 }
 
 class _ExistedProjectState extends State<ExistedProject> {
 
 
   @override
+
   Widget build(BuildContext context) {
+    CollectionReference orderref = FirebaseFirestore.instance.collection("Projects").doc(widget.item.projName).collection("tasks");
     return Scaffold(
 
       appBar: AppBar(
@@ -121,12 +125,24 @@ class _ExistedProjectState extends State<ExistedProject> {
                     ],
                   ),
                  SizedBox( height:10),
-                 ListView.builder(shrinkWrap: true,itemCount:widget.item.tasks.length,itemBuilder: (context,index){
-                   return Tasks(taskName: widget.item.tasks[index].taskName,
-                       taskDuration: widget.item.tasks[index].taskDuration,
-                       taskDescreption:  widget.item.tasks[index].taskDescreption,
-                       Situation:  widget.item.tasks[index].Situation, requests: widget.item.tasks[index].requests,);
-                 })
+                 FutureBuilder(
+                      future: orderref.get(),
+                     builder: (context,snapshot){
+                        if(snapshot.hasData){
+                          return ListView.builder(shrinkWrap: true,itemCount:snapshot.data!.docs.length,itemBuilder: (context,index){
+                            var doc = snapshot.data!.docs[index];
+                            return Tasks(taskName: doc["taskName"],
+                              taskDuration: doc["taskDuration"],
+                              taskDescreption:  doc["taskDescreption"],
+                              Situation:  doc["Status"], requests: [],id: widget.item.OrganisationId,projName: widget.item.projName,);
+                          });
+                        }else{
+                          return Center(child: CircularProgressIndicator());
+                        }
+
+
+                 }),
+
 
 
 

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:grad_proj/Login.dart';
 import 'package:grad_proj/Organisation-Pages/AddProject.dart';
 
 import 'Organisation-Pages/AccountManagement.dart';
 import 'Organisation-Pages/All-Projects.dart';
 import 'Organisation-Pages/Archive.dart';
 import 'Organisation-Pages/MyProjects.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 class Organisation extends StatefulWidget {
   const Organisation({Key? key}) : super(key: key);
 
@@ -41,7 +43,11 @@ class _OrganisationState extends State<Organisation> {
 
         title: Image.asset("assets/1.jpg",height: 130,),
         centerTitle: true,
-        leading:IconButton(onPressed: (){}, icon: Icon(Icons.notifications_active_outlined,color: Colors.grey,)) ,
+        leading:IconButton(onPressed: (
+
+            )async{
+
+        }, icon: Icon(Icons.notifications_active_outlined,color: Colors.grey,)) ,
 
         backgroundColor:Colors.white,
         actions: [IconButton(onPressed: (){}, icon: IconButton(onPressed: (){
@@ -57,7 +63,11 @@ class _OrganisationState extends State<Organisation> {
                         color: Color(0xFF00ADB5),
                         borderRadius: BorderRadius.all(Radius.circular(30))
                     ),
-                    child: MaterialButton(onPressed: (){}, child:Text("Yes",
+                    child: MaterialButton(onPressed: ()async{
+                      final FirebaseAuth auth = FirebaseAuth.instance;
+                      await auth.signOut();
+                      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context)=>LoginPage()));
+                    }, child:Text("Yes",
                       style: TextStyle(fontFamily: "MyCustomFont",color: Colors.white),)),
                   ),
                   SizedBox(width: 25,),
@@ -98,12 +108,12 @@ class _OrganisationState extends State<Organisation> {
             label: 'Add ',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.favorite_border_outlined),
-            label: 'Favourite ',
+            icon: Icon(Icons.archive_outlined),
+            label: 'My ',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.archive),
-            label: 'My',
+            icon: Icon(Icons.favorite_border_outlined),
+            label: 'Favourite',
           ),
         ],
         selectedItemColor:Color(0xFF00ADB5),

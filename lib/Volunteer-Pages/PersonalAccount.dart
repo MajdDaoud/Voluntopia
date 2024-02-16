@@ -1,5 +1,8 @@
 import 'dart:io';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/src/widgets/framework.dart';
@@ -12,13 +15,20 @@ class PersonalAccount extends StatefulWidget {
   @override
   State<PersonalAccount> createState() => _PersonalAccountState();
 }
-
+String user = FirebaseAuth.instance.currentUser!.uid;
+DocumentReference docref = FirebaseFirestore.instance.collection("users").doc(user);
 class _PersonalAccountState extends State<PersonalAccount> {
   String name = 'My Personal Account Name';
   String description = 'Description of me';
   String age = 'My age';
   String college = 'My college';
   String location = 'My location';
+  late String newName;
+  late String newDesreption;
+  late String newAge;
+  late String newCollege;
+  late String newLocation;
+
 
   bool isEditingName = false;
   bool isEditingDescription = false;
@@ -31,7 +41,8 @@ class _PersonalAccountState extends State<PersonalAccount> {
 
   List<String> missions = ["Sympathy", "Initiative", "Cooperation"];
 
-  File? image;
+  File? image = null;
+  String originalImage = "";
 
   Future<void> pickImageFromGallery() async {
     final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery );
@@ -40,6 +51,37 @@ class _PersonalAccountState extends State<PersonalAccount> {
         image = File(pickedFile.path);
       });
     }
+  }
+  late Map<String, dynamic> _user;
+  void _getUser() async {
+    // Get the user document
+    var userDoc = await FirebaseFirestore.instance.collection("users").doc(user).get();
+
+    // Get the user's data
+    var data = userDoc.data()!;
+
+    // Set the state of the widget
+    setState(() {
+      _user = data;
+    });
+  }
+  void _getImageUrl() async {
+    // Get the reference to the image
+    var ref = FirebaseStorage.instance.ref('userPicture/$user/Profile-picture.jpg');
+
+    // Get the download URL of the image
+    var url = await ref.getDownloadURL();
+    setState(() {
+      originalImage = url;
+    });
+
+  }
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    _getUser();
+    _getImageUrl();
   }
 
   @override
@@ -133,7 +175,10 @@ class _PersonalAccountState extends State<PersonalAccount> {
             SizedBox(height: 16.0),
             if (isEditingName)
               TextFormField(
-                initialValue: name,
+                onFieldSubmitted: (value){
+                  newName=value;
+                },
+                initialValue: _user["name"],
                 decoration: InputDecoration(
                   enabledBorder: OutlineInputBorder(
                     borderSide: BorderSide(
@@ -163,7 +208,7 @@ class _PersonalAccountState extends State<PersonalAccount> {
               )
             else
               Text(
-                name,
+                _user["name"],
                 style: TextStyle(
                   fontFamily: "MyCustomFont",
                   color: Color(0xFF393E46),
@@ -200,7 +245,10 @@ class _PersonalAccountState extends State<PersonalAccount> {
             SizedBox(height: 16.0),
             if (isEditingDescription)
               TextFormField(
-                initialValue: description,
+                onFieldSubmitted: (value){
+                  newDesreption =value;
+                },
+                initialValue: _user["story"],
                 decoration: InputDecoration(
                   enabledBorder: OutlineInputBorder(
                     borderSide: BorderSide(
@@ -230,78 +278,16 @@ class _PersonalAccountState extends State<PersonalAccount> {
               )
             else
               Text(
-                description,
+                _user["story"],
                 style: TextStyle(
                   fontFamily: "MyCustomFont",
                   color: Color(0xFF393E46),
                   fontSize: 16,
                 ),
               ),
-            SizedBox(height: 46.0),
-            InkWell(
-              onTap: () {
-                setState(() {
-                  isEditingAge = true;
-                });
-              },
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Age : ',
-                      style: TextStyle(
-                        fontFamily: "MyCustomFont",
-                        color: Color(0xFF393E46),
-                        fontSize: 16,
-                      ),
-                    ),
-                  ),
-                  Icon(
-                    Icons.edit_outlined,
-                    color: Color(0xFFF05F00),
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(height: 8.0),
 
-            if (isEditingAge)
-              TextFormField(
-                initialValue: age,
-                decoration: InputDecoration(
-                  enabledBorder: OutlineInputBorder(
-                    borderSide: BorderSide(
-                      color: Colors.grey,
-                      width: 2.0,
-                    ),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderSide: BorderSide(
-                      color: Color(0xFF00ADB5),
-                      width: 2.0,
-                    ),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                ),
-                onChanged: (value) {
-                  age = value;
-                },
-                onEditingComplete: () {
-                  setState(() {
-                    isEditingAge = false;
-                  });
-                },
-              )
-            else
-              Text(
-                age,
-                style: TextStyle(
-                  fontFamily: "MyCustomFont",
-                  color: Color(0xFF393E46),
-                  fontSize: 16,
-                ),
-              ),
+
+
             SizedBox(height: 46,),
             InkWell(
               onTap: () {
@@ -332,7 +318,10 @@ class _PersonalAccountState extends State<PersonalAccount> {
 
             if (isEditingCollege)
               TextFormField(
-                initialValue: college,
+                onFieldSubmitted: (value){
+                  newCollege =value;
+                },
+                initialValue: _user["study"],
                 decoration: InputDecoration(
                   enabledBorder: OutlineInputBorder(
                     borderSide: BorderSide(
@@ -360,7 +349,7 @@ class _PersonalAccountState extends State<PersonalAccount> {
               )
             else
               Text(
-                college,
+                _user["study"],
                 style: TextStyle(
                   fontFamily: "MyCustomFont",
                   color: Color(0xFF393E46),
@@ -396,7 +385,10 @@ class _PersonalAccountState extends State<PersonalAccount> {
             SizedBox(height: 8.0),
             if (isEditingLocation)
               TextFormField(
-                initialValue: location,
+                onFieldSubmitted: (value){
+                  newLocation = value;
+                },
+                initialValue: _user["city"],
                 decoration: InputDecoration(
                   enabledBorder: OutlineInputBorder(
                     borderSide: BorderSide(
@@ -426,7 +418,7 @@ class _PersonalAccountState extends State<PersonalAccount> {
               )
             else
               Text(
-                location,
+                _user["city"],
                 style: TextStyle(
                   fontFamily: "MyCustomFont",
                   color: Color(0xFF393E46),
@@ -497,6 +489,27 @@ class _PersonalAccountState extends State<PersonalAccount> {
             SizedBox(
               height: 46,
             ),
+            MaterialButton(
+              shape: RoundedRectangleBorder(
+                  borderRadius:BorderRadius.all(Radius.circular(30)) ),
+              color:Color(0xFF00ADB5) ,
+              onPressed: ()async{
+                await FirebaseFirestore.instance.collection('users').doc(user).update({
+                  'name': newName,
+                  'city': newLocation,
+                  'story': newDesreption,
+                  'study' : newCollege
+
+
+                });
+                final Reference storageReference = FirebaseStorage.instance.ref().child('userPicture/$user/Profile-picture.jpg');
+                final TaskSnapshot storageTask = await storageReference.putFile(image!);
+                showDialog(context: context, builder: (context)=>AlertDialog(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(15)),),
+                  title: Text("Success",style: TextStyle(fontFamily: "MyCustomFont",color: Color(0xFF393E46)),),
+                  content: Text("You informations updated successfully",style: TextStyle(fontFamily: "MyCustomFont",color: Color(0xFF393E46)),),
+                ));
+              },child: Text("Update",style: TextStyle(fontFamily: "Font",color: Colors.white),),)
           ],
         ),
       ),

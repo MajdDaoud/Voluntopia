@@ -1,7 +1,16 @@
+
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:grad_proj/Organisation-Pages/AccountManagement.dart';
+import 'package:grad_proj/Volunteer-Pages/PersonalAccount.dart';
+import 'package:grad_proj/Widgets/task-request-item.dart';
+import 'package:grad_proj/Widgets/tasks-item.dart';
 import 'package:image_picker/image_picker.dart';
 
 class AddProject extends StatefulWidget {
@@ -17,7 +26,31 @@ class _AddProjectState extends State<AddProject> {
   TextEditingController _nameController = TextEditingController();
   TextEditingController _descController = TextEditingController();
   TextEditingController _durationController = TextEditingController();
+
   late String name;
+  late String descreption;
+   String? city;
+  late String date;
+  late int duration;
+   List<Tasks> tasks =[];
+  late String taskName;
+  late String taskDescreption;
+  late int taskDuration;
+  late int taskNumber;
+  bool isloading = true;
+  late String imageUrl;
+  void _getImageUrl() async {
+    // Get the reference to the image
+    var ref = FirebaseStorage.instance.ref('Projects/$id/Project-picture.jpg');
+
+    // Get the download URL of the image
+    var url = await ref.getDownloadURL();
+    setState(() {
+      imageUrl = url;
+    });
+
+  }
+
   List<String> syrianBiggestCities = [
     'Aleppo',
     'Damascus',
@@ -31,6 +64,7 @@ class _AddProjectState extends State<AddProject> {
     'Daraa',
     'As-Suwayda',
   ];
+  final storageRef = FirebaseStorage.instance.ref("ProjectImages");
   String? _selectedCity;
   final _formKey = GlobalKey<FormState>();
   int currentstep =0;
@@ -78,7 +112,43 @@ class _AddProjectState extends State<AddProject> {
                               color: Color(0xFF00ADB5),
                               borderRadius: BorderRadius.all(Radius.circular(30))
                           ),
-                          child: MaterialButton(onPressed: (){
+                          child: MaterialButton(onPressed: ()async{
+
+                            var user = FirebaseAuth.instance.currentUser;
+
+// Store the list of tasks in a separate document.
+
+                            final id = user!.uid;
+                            final Reference storageReference = FirebaseStorage.instance.ref().child('Projects/$id/Project-picture.jpg');
+                            await storageReference.putFile(_image!);
+                            _getImageUrl();
+
+
+                             final docRef =await FirebaseFirestore.instance.collection('Projects').doc(name).set({
+                              "ProjectName" : name,
+                              "ProjectDescreption" : descreption,
+                              "ProjectCity": city,
+                              "projectDate" : date,
+                              "projectDuration": duration,
+                              "OrganisationId":user!.uid,
+                               "imageUrl":imageUrl,
+                               "Status" : "Waiting",
+                               "volreq" : 10
+
+                            });
+                            for(Tasks  task in tasks){
+                              DocumentReference tasksDocument = FirebaseFirestore.instance.collection("Projects").doc(name).collection("tasks").doc(docref.id);
+                              tasksDocument.set({"taskName": task.taskName,
+                                "taskDescreption": task.taskDescreption,
+                                "taskDuration" : task.taskDuration.toString(),
+                                "Status" : task.Situation,
+
+                              });
+                            }
+
+
+
+
 
                             print(name);
                           }, child:Text("Add",
@@ -123,8 +193,8 @@ class _AddProjectState extends State<AddProject> {
             content: Column(
               children: [
                 TextFormField(
-                  onSaved: (value){
-                    name=value!;
+                  onFieldSubmitted: (value){
+                    name=value;
                   },
                   decoration: InputDecoration(
                     enabledBorder: OutlineInputBorder(
@@ -164,6 +234,9 @@ class _AddProjectState extends State<AddProject> {
                 Flex(
                   direction: Axis.vertical,
                   children: [TextFormField(
+                    onFieldSubmitted: (value){
+                      descreption =value;
+                    },
                     decoration: InputDecoration(
                       enabledBorder: OutlineInputBorder(
                         borderSide: BorderSide(
@@ -214,6 +287,9 @@ class _AddProjectState extends State<AddProject> {
                 content: Column(
                   children: [
                     DropdownButtonFormField<String>(
+                      onSaved: (value){
+                        city=value!;
+                      },
                       decoration: InputDecoration(
                         errorStyle:  TextStyle( color:Color(0xFFF05F00)),
                         enabledBorder: OutlineInputBorder(
@@ -241,10 +317,10 @@ class _AddProjectState extends State<AddProject> {
                           color: Colors.grey[400],
                         ),
                       ),
-                      value: _selectedCity,
+                      value: city,
                       onChanged: (value) {
                         setState(() {
-                          _selectedCity = value;
+                          city = value!;
                         });
                       },
                       items: syrianBiggestCities
@@ -262,6 +338,15 @@ class _AddProjectState extends State<AddProject> {
                     ),
                     SizedBox(height: 10,),
                     TextFormField(
+                      onFieldSubmitted: (value){
+                        date=value;
+                      },
+                      onChanged: (value){
+                        date=value;
+                      },
+                      onSaved: (value){
+                        date=value!;
+                      },
                       style: TextStyle(fontFamily: "MyCustomFont", color: Color(0xFF393E46),fontSize: 16 ),
                       controller: _dateController,
                       decoration: InputDecoration(
@@ -300,6 +385,8 @@ class _AddProjectState extends State<AddProject> {
 
                         ))!;
                         _dateController.text = date.toString().substring(0, 10);
+                        this.date=date.toString().substring(0, 10);
+                        _dateController.text = date.toString().substring(0, 10);
                       },
                     )
                   ],
@@ -312,7 +399,9 @@ class _AddProjectState extends State<AddProject> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     TextFormField(
-
+                        onFieldSubmitted: (value){
+                          duration=int.parse(value);
+                        },
                       decoration: InputDecoration(
                         enabledBorder: OutlineInputBorder(
                           borderSide: BorderSide(
@@ -355,141 +444,160 @@ class _AddProjectState extends State<AddProject> {
                         color: Color(0xFFF05F00)
                       ),
                       child: MaterialButton(onPressed: (){showDialog(context: context, builder: (context){
-                        return AlertDialog(
+                        return SingleChildScrollView(
+                          child: AlertDialog(
 
-                          title: Center(child: Text("Add New Task",style: TextStyle(fontFamily: "MyCustomFont",fontSize: 19,color: Color(0xFF393E46)),)),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.all(Radius.circular(30)),
+                            title: Center(child: Text("Add New Task",style: TextStyle(fontFamily: "MyCustomFont",fontSize: 19,color: Color(0xFF393E46)),)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.all(Radius.circular(30)),
 
+                            ),
+                            content: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text("Add Task Name:",style: TextStyle(fontFamily: "MyCustomFont",fontSize: 17,color: Color(0xFF393E46)),),
+                                SizedBox(height: 15,),
+                                TextFormField(
+                                  onFieldSubmitted: (value){
+                                    taskName=value;
+                                  },
+                                  decoration: InputDecoration(
+                                    enabledBorder: OutlineInputBorder(
+                                      borderSide: BorderSide(
+                                        color:Colors.grey,
+                                        width: 2.0,
+                                      ),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderSide: BorderSide(
+                                        color: Color(0xFF00ADB5),
+                                        width: 2.0,
+                                      ),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    labelText: 'Name',
+                                    labelStyle: TextStyle(
+                                      fontFamily: "MyCustomFont",
+                                      color: Colors.grey[400],
+                                      fontSize: 16,
+                                    ),
+                                    prefixIcon: Icon(
+                                      Icons.task_alt_outlined,
+                                      color: Colors.grey[400],
+                                    ),
+                                  ),
+                                  validator: (value) {
+                                    if (value!.isEmpty) {
+                                      return 'Please enter Task name';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                SizedBox(height: 15,),
+                                Text("Add Task Descreption",style: TextStyle(fontFamily: "MyCustomFont",fontSize: 17,color:Color(0xFF393E46)),),
+                                SizedBox(height: 15,),
+                                TextFormField(
+                                  onFieldSubmitted: (value){
+                                    taskDescreption =value;
+                                  },
+                                  decoration: InputDecoration(
+                                    enabledBorder: OutlineInputBorder(
+                                      borderSide: BorderSide(
+                                        color:Colors.grey,
+                                        width: 2.0,
+                                      ),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderSide: BorderSide(
+                                        color: Color(0xFF00ADB5),
+                                        width: 2.0,
+                                      ),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    labelText: 'Descreption',
+                                    labelStyle: TextStyle(
+                                      fontFamily: "MyCustomFont",
+                                      color: Colors.grey[400],
+                                      fontSize: 16,
+                                    ),
+                                    prefixIcon: Icon(
+                                      Icons.description_outlined,
+                                      color: Colors.grey[400],
+                                    ),
+                                  ),
+                                  validator: (value) {
+                                    if (value!.isEmpty) {
+                                      return 'Please enter Task Descreption';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                SizedBox(height: 10,),
+                                Text("Add Task Duration",style: TextStyle(fontFamily: "MyCustomFont",fontSize: 17,color: Color(0xFF393E46)),),
+                                SizedBox(height: 10,),
+                                TextFormField(
+                                  onFieldSubmitted: (value){
+                                    taskDuration=int.parse(value);
+                                  },
+                                  decoration: InputDecoration(
+                                    enabledBorder: OutlineInputBorder(
+                                      borderSide: BorderSide(
+                                        color:Colors.grey,
+                                        width: 2.0,
+                                      ),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderSide: BorderSide(
+                                        color: Color(0xFF00ADB5),
+                                        width: 2.0,
+                                      ),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    labelText: 'Duration',
+                                    labelStyle: TextStyle(
+                                      fontFamily: "MyCustomFont",
+                                      color: Colors.grey[400],
+                                      fontSize: 16,
+                                    ),
+                                    prefixIcon: Icon(
+                                      Icons.timelapse_outlined,
+                                      color: Colors.grey[400],
+                                    ),
+                                  ),
+                                  validator: (value) {
+                                    if (value!.isEmpty) {
+                                      return 'Please enter Task name';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                SizedBox(height: 15,),
+                                Center(
+                                  child: Container(
+                                    width: 100,
+                                    decoration: BoxDecoration(
+                                        color: Color(0xFFF05F00) ,
+                                        borderRadius: BorderRadius.all(Radius.circular(30))),
+                                    child: MaterialButton(onPressed: (){
+
+
+                                      Tasks t = Tasks(taskName: taskName, taskDuration: taskDuration.toString(), taskDescreption: taskDescreption, Situation: true, requests: [],
+                                                id: FirebaseAuth.instance.currentUser!.uid,projName: name,
+                                      );
+                                      tasks.add(t);
+                                      print(tasks);
+                                    },child: Text("Add Task",style: TextStyle(fontFamily: "MyCustomFont",
+                                      color:Colors.white )
+                                      )
+                                      ,),
+                                  ),
+                                )
+                              ],),
                           ),
-                          content: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text("Add Task Name:",style: TextStyle(fontFamily: "MyCustomFont",fontSize: 17,color: Color(0xFF393E46)),),
-                              SizedBox(height: 15,),
-                              TextFormField(
-                                decoration: InputDecoration(
-                                  enabledBorder: OutlineInputBorder(
-                                    borderSide: BorderSide(
-                                      color:Colors.grey,
-                                      width: 2.0,
-                                    ),
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderSide: BorderSide(
-                                      color: Color(0xFF00ADB5),
-                                      width: 2.0,
-                                    ),
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  labelText: 'Name',
-                                  labelStyle: TextStyle(
-                                    fontFamily: "MyCustomFont",
-                                    color: Colors.grey[400],
-                                    fontSize: 16,
-                                  ),
-                                  prefixIcon: Icon(
-                                    Icons.task_alt_outlined,
-                                    color: Colors.grey[400],
-                                  ),
-                                ),
-                                validator: (value) {
-                                  if (value!.isEmpty) {
-                                    return 'Please enter Task name';
-                                  }
-                                  return null;
-                                },
-                              ),
-                              SizedBox(height: 15,),
-                              Text("Add Task Descreption",style: TextStyle(fontFamily: "MyCustomFont",fontSize: 17,color:Color(0xFF393E46)),),
-                              SizedBox(height: 15,),
-                              TextFormField(
-                                decoration: InputDecoration(
-                                  enabledBorder: OutlineInputBorder(
-                                    borderSide: BorderSide(
-                                      color:Colors.grey,
-                                      width: 2.0,
-                                    ),
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderSide: BorderSide(
-                                      color: Color(0xFF00ADB5),
-                                      width: 2.0,
-                                    ),
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  labelText: 'Descreption',
-                                  labelStyle: TextStyle(
-                                    fontFamily: "MyCustomFont",
-                                    color: Colors.grey[400],
-                                    fontSize: 16,
-                                  ),
-                                  prefixIcon: Icon(
-                                    Icons.description_outlined,
-                                    color: Colors.grey[400],
-                                  ),
-                                ),
-                                validator: (value) {
-                                  if (value!.isEmpty) {
-                                    return 'Please enter Task Descreption';
-                                  }
-                                  return null;
-                                },
-                              ),
-                              SizedBox(height: 10,),
-                              Text("Add Task Duration",style: TextStyle(fontFamily: "MyCustomFont",fontSize: 17,color: Color(0xFF393E46)),),
-                              SizedBox(height: 10,),
-                              TextFormField(
-                                decoration: InputDecoration(
-                                  enabledBorder: OutlineInputBorder(
-                                    borderSide: BorderSide(
-                                      color:Colors.grey,
-                                      width: 2.0,
-                                    ),
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderSide: BorderSide(
-                                      color: Color(0xFF00ADB5),
-                                      width: 2.0,
-                                    ),
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  labelText: 'Duration',
-                                  labelStyle: TextStyle(
-                                    fontFamily: "MyCustomFont",
-                                    color: Colors.grey[400],
-                                    fontSize: 16,
-                                  ),
-                                  prefixIcon: Icon(
-                                    Icons.timelapse_outlined,
-                                    color: Colors.grey[400],
-                                  ),
-                                ),
-                                validator: (value) {
-                                  if (value!.isEmpty) {
-                                    return 'Please enter Task name';
-                                  }
-                                  return null;
-                                },
-                              ),
-                              SizedBox(height: 15,),
-                              Center(
-                                child: Container(
-                                  width: 100,
-                                  decoration: BoxDecoration(
-                                      color: Color(0xFFF05F00) ,
-                                      borderRadius: BorderRadius.all(Radius.circular(30))),
-                                  child: MaterialButton(onPressed: (){},child: Text("Add Task",style: TextStyle(fontFamily: "MyCustomFont",
-                                    color:Colors.white )
-                                    )
-                                    ,),
-                                ),
-                              )
-                            ],),
                         );
                       }
                       );

@@ -1,16 +1,20 @@
 import 'dart:ui';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:grad_proj/Widgets/task-request-item.dart';
 
 class Tasks extends StatelessWidget {
+final String id;
+final String projName;
   final String taskName;
-  final int taskDuration;
+  final String taskDuration;
   final String taskDescreption;
   final bool Situation;
   final List<TaskRequest> requests;
 
-  Tasks({required this.taskName, required this.taskDuration, required this.taskDescreption, required this.Situation, required this.requests});
+  Tasks({required this.projName, required this.id,required this.taskName, required this.taskDuration, required this.taskDescreption, required this.Situation, required this.requests});
 
 
   @override
@@ -69,7 +73,22 @@ class Tasks extends StatelessWidget {
                                     color: Color(0xFF00ADB5),
                                     borderRadius: BorderRadius.all(Radius.circular(30))
                                 ),
-                                child: MaterialButton(onPressed: (){}, child:Text("Apply",
+                                child: MaterialButton(onPressed: ()async{
+                                  var uid = FirebaseAuth.instance.currentUser!.uid;
+                                  var doc = await FirebaseFirestore.instance.collection("users").doc(uid).get();
+                                  await FirebaseFirestore.instance.collection("Projects").doc(this.projName).collection("requests").
+                                  doc().set({
+                                    "Volid" : uid,
+                                    "taskName" : taskName,
+                                    "volname" : doc["name"],
+
+
+                                  });
+                                  showDialog(context: context, builder: (context)=>AlertDialog(
+                                    title: Text("success"),
+                                    content: Text("You have add a volunteer request successfully"),
+                                  ));
+                                }, child:Text("Apply",
                                 style: TextStyle(fontFamily: "MyCustomFont",color: Colors.white),)),
                               ),
                               SizedBox(width: 25,),

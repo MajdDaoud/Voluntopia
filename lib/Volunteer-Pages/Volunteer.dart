@@ -1,6 +1,8 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/src/widgets/framework.dart';
 import 'package:flutter/src/widgets/placeholder.dart';
+import 'package:grad_proj/Login.dart';
 import 'package:grad_proj/Organisation-Pages/All-Projects.dart';
 import 'PersonalAccount.dart';
 
@@ -37,7 +39,10 @@ class _VolunteerState extends State<Volunteer> {
 
         title: Image.asset("assets/1.jpg",height: 130,),
         centerTitle: true,
-        leading:IconButton(onPressed: (){}, icon: Icon(Icons.notifications_active_outlined,color: Colors.grey,)) ,
+        leading:IconButton(onPressed: (){
+
+
+        }, icon: Icon(Icons.notifications_active_outlined,color: Colors.grey,)) ,
 
         backgroundColor:Colors.white,
         actions: [IconButton(onPressed: (){}, icon: IconButton(onPressed: (){
@@ -53,7 +58,11 @@ class _VolunteerState extends State<Volunteer> {
                     color: Color(0xFF00ADB5),
                     borderRadius: BorderRadius.all(Radius.circular(30))
                 ),
-                child: MaterialButton(onPressed: (){}, child:Text("Yes",
+                child: MaterialButton(onPressed: () async{
+                  await FirebaseAuth.instance.signOut();
+                  Navigator.pop(context);
+                  Navigator.pushReplacement(context, MaterialPageRoute(builder: (context)=>LoginPage()));
+                }, child:Text("Yes",
                   style: TextStyle(fontFamily: "MyCustomFont",color: Colors.white),)),
               ),
               SizedBox(width: 25,),
